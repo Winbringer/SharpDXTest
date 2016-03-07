@@ -23,6 +23,7 @@ namespace ConsoleApplication1
         private int[] indexes = new int[] { 0,1,2 };
         private SharpDX.Direct3D11.Buffer idexBuffer;
         //Шейдеры
+        private SharpDX.Direct3D11.Buffer constBuffer;
         private SharpDX.Direct3D11.VertexShader vertexShader;
         private SharpDX.Direct3D11.PixelShader pixelShader;
         private ShaderSignature inputSignature;
@@ -42,11 +43,11 @@ namespace ConsoleApplication1
             InitializeDeviceResources();
             InitializeTriangle();
             InitializeShaders();
-            renderForm.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            //var factory = swapChain.GetParent<SharpDX.DXGI.Factory>();
-            //factory.MakeWindowAssociation(renderForm.Handle, SharpDX.DXGI.WindowAssociationFlags.IgnoreAll);
-            //renderForm.Focus();
-            //renderForm.Activate();
+            renderForm.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen; 
+            renderForm.Shown += (sender, e) =>
+            {
+                renderForm.Activate();
+            };
         }
 
         private void InitializeShaders()
@@ -60,6 +61,7 @@ namespace ConsoleApplication1
             {
                 pixelShader = new SharpDX.Direct3D11.PixelShader(d3dDevice, pixelShaderByteCode);
             }
+
             // Задать для видеокарты шейдеры и тип примитива
             d3dDeviceContext.VertexShader.Set(vertexShader);
             d3dDeviceContext.PixelShader.Set(pixelShader);
@@ -72,6 +74,9 @@ namespace ConsoleApplication1
         {
             triangleVertexBuffer = SharpDX.Direct3D11.Buffer.Create<SharpDX.Vector3>(d3dDevice, SharpDX.Direct3D11.BindFlags.VertexBuffer, vertices);
             idexBuffer = SharpDX.Direct3D11.Buffer.Create<int>(d3dDevice, SharpDX.Direct3D11.BindFlags.IndexBuffer, indexes);
+            constBuffer = new SharpDX.Direct3D11.Buffer(d3dDevice, SharpDX.Utilities.SizeOf<SharpDX.Color4>(), SharpDX.Direct3D11.ResourceUsage.Default, SharpDX.Direct3D11.BindFlags.ConstantBuffer, SharpDX.Direct3D11.CpuAccessFlags.None, SharpDX.Direct3D11.ResourceOptionFlags.None, 0);
+            SharpDX.Color4 color = new SharpDX.Color4(1f, 0f, 1f, 1);
+            d3dDeviceContext.UpdateSubresource(ref color, constBuffer);
         }
 
         private void InitializeDeviceResources()
@@ -87,6 +92,8 @@ namespace ConsoleApplication1
                 IsWindowed = true
             };
             SharpDX.Direct3D11.Device.CreateWithSwapChain(SharpDX.Direct3D.DriverType.Hardware, SharpDX.Direct3D11.DeviceCreationFlags.None, swapChainDesc, out d3dDevice, out swapChain);
+            var factory = swapChain.GetParent<SharpDX.DXGI.Factory>();
+            factory.MakeWindowAssociation(renderForm.Handle, SharpDX.DXGI.WindowAssociationFlags.IgnoreAll);
             d3dDeviceContext = d3dDevice.ImmediateContext;
             using (SharpDX.Direct3D11.Texture2D backBuffer = swapChain.GetBackBuffer<SharpDX.Direct3D11.Texture2D>(0))
             {
@@ -114,6 +121,7 @@ namespace ConsoleApplication1
             d3dDeviceContext.ClearRenderTargetView(renderTargetView, new SharpDX.Color(32, 103, 178));
             d3dDeviceContext.InputAssembler.SetVertexBuffers(0, new SharpDX.Direct3D11.VertexBufferBinding(triangleVertexBuffer, SharpDX.Utilities.SizeOf<SharpDX.Vector3>(), 0));
             d3dDeviceContext.InputAssembler.SetIndexBuffer(idexBuffer, SharpDX.DXGI.Format.R32_UInt, 0);
+            d3dDeviceContext.PixelShader.SetConstantBuffer(0, constBuffer);
             d3dDeviceContext.DrawIndexed(indexes.Count(),0,0);
             swapChain.Present(1, SharpDX.DXGI.PresentFlags.None);
         }
